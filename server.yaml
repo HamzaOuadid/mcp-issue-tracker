@@ -1,0 +1,59 @@
+# mcp-issue-tracker server config.
+#
+# Single source of truth for which tools exist, whether each is read-only
+# or a write, and what it costs. A security reviewer can read this file
+# alone and know exactly what the server can and cannot do without
+# reading a line of Python. This is the same config shape used by the
+# sibling `mcp-starter-template` project -- see README.md's
+# "Cross-reference" section for how the pattern carries over.
+
+# Global dry-run switch. When true, every WRITE tool computes and logs
+# the change it WOULD have made (audit record has dry_run=true) and
+# returns a synthetic preview instead of touching the real SQLite issue
+# database. Read tools are never affected by this flag.
+dry_run: true
+
+# Write tools are refused with WRITE_NOT_ALLOWED unless their name
+# appears here. Empty by default -- "read-only unless explicitly
+# enabled" is the whole point. Both this AND dry_run:false are required
+# before a write tool actually mutates the database.
+allowed_write_tools: []
+
+rate_limit:
+  calls_per_min: 30
+  cost_per_session: 100
+  window_seconds: 60
+
+tools:
+  search_issues:
+    read_only: true
+    cost_units: 1
+    description: "Full-text search over issues visible to the caller (title/body/status/label filters)."
+  get_issue:
+    read_only: true
+    cost_units: 1
+    description: "Fetch one issue's full detail (body, labels, comments) if visible to the caller."
+  list_labels:
+    read_only: true
+    cost_units: 1
+    description: "List every label known to the tracker."
+  summarize_issue:
+    read_only: true
+    cost_units: 1
+    description: "Deterministic extractive summary of one issue (no LLM call)."
+  get_rate_status:
+    read_only: true
+    cost_units: 0
+    description: "Report the caller's remaining call/cost budget for the current window."
+  create_issue:
+    read_only: false
+    cost_units: 5
+    description: "Create a new issue, scoped to the caller's team (write, allowlist-gated)."
+  add_comment:
+    read_only: false
+    cost_units: 3
+    description: "Add a comment to an existing open issue (write, allowlist-gated)."
+  set_issue_status:
+    read_only: false
+    cost_units: 3
+    description: "Open or close an issue (write, allowlist-gated)."
