@@ -6,13 +6,13 @@ Built as **Project 10** in a 20-project portfolio: *"a second, distinct MCP serv
 
 ## Which variant, and why
 
-The spec ([`Project_Specs_20/10-second-mcp-server-docs-wiki-search-or-issue-tracker.md`](../Project_Specs_20/10-second-mcp-server-docs-wiki-search-or-issue-tracker.md)) offered a choice: docs/wiki search, or an issue tracker. I built the **issue tracker**.
+The spec (`10-second-mcp-server-docs-wiki-search-or-issue-tracker.md`) offered a choice: docs/wiki search, or an issue tracker. I built the **issue tracker**.
 
 Reasoning: a docs/wiki server is essentially two tools (`search`, `fetch`) over static content. An issue tracker needs a real data model (issues, comments, labels, status transitions), real authorization decisions (who can see what, who can write what), and a natural place to demonstrate the write-gating half of the security pattern — the spec's non-goal explicitly allows write operations "if explicitly justified and gated the same way" as the reference implementation, and CRUD is exactly that justification. It's the more concretely useful demo of the pattern, not just the read half of it.
 
 ## Cross-reference: shared pattern with `mcp-starter-template`
 
-This server intentionally reuses the security architecture from the sibling **[`mcp-starter-template`](../mcp-starter-template/)** project (Project 2 in this portfolio) rather than re-deriving it:
+This server intentionally reuses the security architecture from the sibling **[`mcp-starter-template`](https://github.com/HamzaOuadid/mcp-starter-template)** project (Project 2 in this portfolio) rather than re-deriving it:
 
 | Pattern | `mcp-starter-template` | `mcp-issue-tracker` (this repo) |
 |---|---|---|
@@ -24,7 +24,7 @@ This server intentionally reuses the security architecture from the sibling **[`
 | Audit trail | `audit.py`: JSONL + SQLite `audit_log`, every call logged | Identical dual-sink design |
 | Rate limiting | `limiter.py`: fixed-window per-session cap | Identical, plus a `get_rate_status` tool surfacing it (the spec's `api_rate_state` data model, made queryable) |
 
-**Honest note on the reverse link:** at the time this repo was built, `mcp-starter-template` had its architecture modules in place (`auth.py`, `config.py`, `audit.py`, `limiter.py`, `registry.py`, `errors.py`, `identity.py`) but no `README.md` yet to link back from — it was mid-build in a parallel session. This README links to it; once its own README is published, add a reciprocal link back to this repo under its cross-reference section. This is called out explicitly rather than silently claimed as done (see **Risks / Open Questions**).
+[`mcp-starter-template`](https://github.com/HamzaOuadid/mcp-starter-template) links back to this repo under its own cross-reference section, so the pattern is documented from both directions.
 
 ## Architecture
 
@@ -86,7 +86,7 @@ Every tool call is one pipeline: **authenticate → rate-limit → (if a write) 
 ## Install
 
 ```bash
-git clone <this-repo-path>
+git clone https://github.com/HamzaOuadid/mcp-issue-tracker.git
 cd mcp-issue-tracker
 pip install -e .
 ```
@@ -287,7 +287,6 @@ pytest tests/ -v
 ## Risks / Open Questions
 
 - **Deviates from the spec's "live public API" framing.** Section 5/10/11 of the spec describe wrapping a live third-party API (e.g. the real GitHub Issues API) with real rate limits against that API's own quota. This build instead uses a **real local SQLite-backed tracker with genuine CRUD**, per this portfolio initiative's explicit environment note (no LLM keys, prefer local data over live third-party dependencies where the task allows it). Consequences: `api_rate_state` in the spec's data model is implemented as *this server's own* per-caller budget (surfaced via `get_rate_status`) rather than a third-party API's quota; the "document the API version targeted" edge case is implemented as a pinned local `schema_version` instead. Both are noted inline in the code (`limiter.py`, `db.py`) so the substitution isn't silent.
-- **`mcp-starter-template` cross-reference is one-directional right now.** That project's architecture modules exist but its `README.md` doesn't yet (it was mid-build in a separate session at the time of writing). This README links to it explicitly; the reciprocal link is pending that project's own README.
 - **Mock identity, not a real IdP.** Explicitly DEV-ONLY, documented in `identity.py`'s docstring — same posture as `mcp-starter-template`. A real deployment needs OAuth/JWT/mTLS in front of `AuthMiddleware`.
 - **Single-writer SQLite.** Fine for a demo/portfolio server; a concurrent multi-writer deployment would need a real database (same tradeoff `ragbench`'s README makes explicitly for its own SQLite use).
 - **Scope cuts vs. the spec's milestones (section 8):** no separate CLI for querying the audit log (query it directly via `AuditLogger.query()` or `sqlite3 issue_tracker.db`); no tagged release (`git tag`) — left to the repo owner once published; label management has no dedicated `delete_label`/`rename_label` tool (labels are create-on-write only, which is enough to demonstrate the pattern without over-building an admin surface the spec didn't ask for).
